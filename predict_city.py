@@ -45,34 +45,33 @@ class DoubleConv(nn.Module):
         super().__init__()
         mid_ch = mid_ch or out_ch
         self.net = nn.Sequential(
-            nn.Conv2d(in_ch,  mid_ch, 3, padding=1, bias=False),
-            nn.BatchNorm2d(mid_ch), nn.ReLU(inplace=True),
-            nn.Conv2d(mid_ch, out_ch, 3, padding=1, bias=False),
-            nn.BatchNorm2d(out_ch),  nn.ReLU(inplace=True),
+            nn.Conv2d(in_ch,  mid_ch, 3, padding=1, bias=True),
+            nn.InstanceNorm2d(mid_ch, affine=True), nn.ReLU(inplace=True),
+            nn.Conv2d(mid_ch, out_ch, 3, padding=1, bias=True),
+            nn.InstanceNorm2d(out_ch, affine=True), nn.ReLU(inplace=True),
         )
     def forward(self, x): return self.net(x)
-
 
 class ASPP(nn.Module):
     def __init__(self, in_ch, out_ch=256, dilations=None):
         super().__init__()
         dilations = dilations or [1, 6, 12, 18]
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True))
+            nn.Conv2d(in_ch, out_ch, 1, bias=True),
+            nn.InstanceNorm2d(out_ch, affine=True), nn.ReLU(inplace=True))
         self.atrous = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(in_ch, out_ch, 3, padding=d, dilation=d, bias=False),
-                nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True))
+                nn.Conv2d(in_ch, out_ch, 3, padding=d, dilation=d, bias=True),
+                nn.InstanceNorm2d(out_ch, affine=True), nn.ReLU(inplace=True))
             for d in dilations])
         self.gap = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_ch, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True))
+            nn.Conv2d(in_ch, out_ch, 1, bias=True),
+            nn.ReLU(inplace=True))          # ← GAP后不加Norm
         n = 1 + len(dilations) + 1
         self.proj = nn.Sequential(
-            nn.Conv2d(n * out_ch, out_ch, 1, bias=False),
-            nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True),
+            nn.Conv2d(n * out_ch, out_ch, 1, bias=True),
+            nn.InstanceNorm2d(out_ch, affine=True), nn.ReLU(inplace=True),
             nn.Dropout(0.1))
 
     def forward(self, x):
@@ -85,9 +84,9 @@ class ASPP(nn.Module):
 class AttentionGate(nn.Module):
     def __init__(self, F_g, F_l, F_int):
         super().__init__()
-        self.W_g  = nn.Sequential(nn.Conv2d(F_g,   F_int, 1), nn.BatchNorm2d(F_int))
-        self.W_x  = nn.Sequential(nn.Conv2d(F_l,   F_int, 1), nn.BatchNorm2d(F_int))
-        self.psi  = nn.Sequential(nn.Conv2d(F_int, 1,     1), nn.BatchNorm2d(1), nn.Sigmoid())
+        self.W_g  = nn.Sequential(nn.Conv2d(F_g,   F_int, 1, bias=True), nn.InstanceNorm2d(F_int, affine=True))
+        self.W_x  = nn.Sequential(nn.Conv2d(F_l,   F_int, 1, bias=True), nn.InstanceNorm2d(F_int, affine=True))
+        self.psi  = nn.Sequential(nn.Conv2d(F_int, 1,     1, bias=True), nn.InstanceNorm2d(1,     affine=True), nn.Sigmoid())
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, g, x):
@@ -598,7 +597,7 @@ def main():
     OUT_DIR     = r"/root/autodl-tmp/预测结果"
 
     # ── 高级参数（一般不需要改）────────────────────────────────────
-    THRESHOLD   = 0.15      # 检测阈值：调低(0.3)召回更多，调高(0.7)更保守
+    THRESHOLD   = 0.30      # 检测阈值：调低(0.3)召回更多，调高(0.7)更保守
     TILE_SIZE   = 256      # 切片大小，须与训练一致
     OVERLAP     = 64       # 切片重叠像素
     MAX_VALUE   = 2047.0   # 归一化分母：8bit影像改255，16bit改65535

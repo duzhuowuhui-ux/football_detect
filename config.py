@@ -33,8 +33,8 @@ elif IN_AUTODL:
     _DATA_ROOT           = 'r/root/autodl-tmp/data'
 
     # ★ 原始遥感影像与标注文件，上传后填写正确路径
-    IMAGE_PATH           = r'/root/autodl-tmp/ortho_tif.tif'
-    ANNOTATION_SHAPEFILE = r'/root/autodl-tmp/shp/field1.shp'
+    IMAGE_PATH           = r'/root/autodl-tmp/image/ortho_tif.tif'
+    ANNOTATION_SHAPEFILE = r'/root/autodl-tmp/shp/武汉/field1.shp'
 
     # 预处理好的 npy 数据集目录（prepare_data.py 生成 / 手动上传均可）
     _READY_DATASET       = f'{_DATA_ROOT}/dataset'
@@ -134,6 +134,9 @@ AUG_ZOOM_PROB    = 0.30
 
 # ==================== 设备 ====================
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# predict.py 用到的预测切片大小（与训练一致）
+PRED_TILE_SIZE = TILE_SIZE
 
 # ==================== 打印摘要 ====================
 if __name__ == '__main__':

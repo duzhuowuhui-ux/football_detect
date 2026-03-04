@@ -182,7 +182,7 @@ def visualize(pred: np.ndarray, gt: np.ndarray, m: dict, out_dir: Path):
         fontsize=13, fontweight='bold'
     )
 
-    # 预测
+    # 预测conda --version
     axes[0].imshow(pred_s, cmap='Greens', vmin=0, vmax=1, interpolation='nearest')
     axes[0].set_title('预测掩膜'); axes[0].axis('off')
 
